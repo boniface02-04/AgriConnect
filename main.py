@@ -5,6 +5,13 @@ import groq
 import os
 from dotenv import load_dotenv
 import base64
+import re
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 load_dotenv()
 
@@ -29,7 +36,7 @@ def root():
 @app.post("/chat")
 async def chat(req: ChatRequest):
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.3-70b-versatile",
         messages=[
             {
                 "role": "system",
@@ -45,33 +52,44 @@ async def chat(req: ChatRequest):
 
 @app.post("/disease")
 async def detect_disease(file: UploadFile = File(...)):
-    image_data = await file.read()
-    base64_image = base64.b64encode(image_data).decode("utf-8")
-    
-    response = client.chat.completions.create(
-        model="llama-3.2-11b-vision-preview",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
+    try:
+        image_data = await file.read()
+        base64_image = base64.b64encode(image_data).decode("utf-8")
+        
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": "You are an expert agriculture assistant. Look at this crop leaf image and tell me the disease and cure. Format your response exactly like this:\nDisease: [Name]\nCure: [Detailed Solution]"
                         }
-                    },
-                    {
-                        "type": "text",
-                        "text": "You are an expert agriculture assistant. Look at this crop leaf image and tell me: 1) What disease or problem do you see? 2) What is the cure or solution? Keep it simple and practical for a beginner farmer in India."
-                    }
-                ]
-            }
-        ]
-    )
-    
-    reply = response.choices[0].message.content
-    parts = reply.split("\n", 1)
-    disease = parts[0] if parts else "Unknown"
-    cure = parts[1] if len(parts) > 1 else reply
-    
-    return {"disease": disease, "cure": cure}
+                    ]
+                }
+            ]
+        )
+        
+        reply = response.choices[0].message.content
+        logger.info(f"AI Response: {reply}")
+
+
+
+        # Use regex for more robust parsing
+        disease_match = re.search(r"Disease:\s*(.*)", reply, re.IGNORECASE)
+        cure_match = re.search(r"Cure:\s*([\s\S]*)", reply, re.IGNORECASE)
+
+        disease = disease_match.group(1).strip() if disease_match else "Unknown Issue"
+        cure = cure_match.group(1).strip() if cure_match else reply
+
+        return {"disease": disease, "cure": cure}
+    except Exception as e:
+        logger.error(f"Error in detect_disease: {str(e)}")
+        return {"error": "Failed to process image", "details": str(e)}

@@ -516,8 +516,8 @@ if page == "🏠  Home":
     st.markdown("""
     <div class="hero-banner">
         <div class="hero-eyebrow">🌱 Welcome to AgriConnect</div>
-        <div class="hero-title">Grow Smarter,<br>Earn Better.</div>
-        <div class="hero-sub">Your AI-powered smart farming companion — bringing technology to every field, every farmer, every harvest.</div>
+        <div class="hero-title">USE SMARTER,<br>Earn Better.</div>
+        <div class="hero-sub">connecting farmers to a better tomorrow</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -620,13 +620,18 @@ elif page == "🤖  AI Assistant":
 
     if send and user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
-        try:
-            res = requests.post("http://localhost:8000/chat", json={"message": user_input})
-            reply = res.json()["reply"]
-        except:
-            reply = "⚠️ Could not connect to the server. Please make sure the backend is running."
+        with st.spinner("AgriConnect AI is thinking..."):
+            try:
+                res = requests.post("http://localhost:8000/chat", json={"message": user_input}, timeout=30)
+                res.raise_for_status()
+                reply = res.json()["reply"]
+            except requests.exceptions.ConnectionError:
+                reply = "❌ **Backend Connection Error**: I couldn't reach the server. \n\n**To fix this:**\n1. Open a terminal in the `backend` folder.\n2. Run `python main.py` or `uvicorn main:app --reload`."
+            except Exception as e:
+                reply = f"⚠️ **Error**: Something went wrong ({str(e)})."
         st.session_state.messages.append({"role": "ai", "content": reply})
         st.rerun()
+
 
 # ═══════════════════════════════════════════════════════
 # DISEASE DETECTION
@@ -652,21 +657,30 @@ elif page == "🌿  Disease Detection":
                     try:
                         res = requests.post(
                             "http://localhost:8000/disease",
-                            files={"file": ("image.jpg", uploaded_file.getvalue(), "image/jpeg")}
+                            files={"file": ("image.jpg", uploaded_file.getvalue(), "image/jpeg")},
+                            timeout=60
                         )
+                        res.raise_for_status()
                         data = res.json()
-                        st.markdown(f"""
-                        <div style="background:#fff5f5;border:2px solid #fca5a5;border-radius:14px;padding:16px;margin-top:12px;">
-                            <div style="font-weight:700;color:#dc2626;font-size:14px;">🦠 Detected Disease</div>
-                            <div style="font-size:18px;font-weight:700;color:#1a1008;margin-top:4px;">{data['disease']}</div>
-                        </div>
-                        <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:16px;margin-top:10px;">
-                            <div style="font-weight:700;color:#16a34a;font-size:14px;">💊 Recommended Treatment</div>
-                            <div style="font-size:14px;color:#1a1008;margin-top:4px;line-height:1.5;">{data['cure']}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    except:
-                        st.error("Could not connect to server. Please ensure backend is running.")
+                        
+                        if "error" in data:
+                            st.error(f"AI Error: {data.get('details', 'Unknown error')}")
+                        else:
+                            st.markdown(f"""
+                            <div style="background:#fff5f5;border:2px solid #fca5a5;border-radius:14px;padding:16px;margin-top:12px;">
+                                <div style="font-weight:700;color:#dc2626;font-size:14px;">🦠 Detected Disease</div>
+                                <div style="font-size:18px;font-weight:700;color:#1a1008;margin-top:4px;">{data['disease']}</div>
+                            </div>
+                            <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:16px;margin-top:10px;">
+                                <div style="font-weight:700;color:#16a34a;font-size:14px;">💊 Recommended Treatment</div>
+                                <div style="font-size:14px;color:#1a1008;margin-top:4px;line-height:1.5;">{data['cure']}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    except requests.exceptions.ConnectionError:
+                        st.error("❌ **Backend Connection Error**: Could not connect to the disease detection service. Please ensure the backend server is running.")
+                    except Exception as e:
+                        st.error(f"⚠️ Error: {str(e)}")
+
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
@@ -727,7 +741,12 @@ elif page == "🛒  Marketplace":
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            st.button(f"Contact Seller", key=f"btn_{i}")
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                 st.button(f"Contact Seller", key=f"btn_{i}")
+            with col_b2:
+                 st.link_button("Market Insights 📊", "https://agmarknet.gov.in/", use_container_width=True)
+
 
 # ═══════════════════════════════════════════════════════
 # GOVERNMENT SCHEMES
@@ -767,7 +786,19 @@ elif page == "🏛️  Government Schemes":
                 <div class="scheme-detail"><b>How to apply:</b> {s["how"]}</div>
             </div>
             """, unsafe_allow_html=True)
-            st.button(f"Apply for {s['title']}", key=f"scheme_{i}")
+            
+            scheme_urls = {
+                "PM-KISAN": "https://pmkisan.gov.in/",
+                "Pradhan Mantri Fasal Bima Yojana": "https://pmfby.gov.in/",
+                "Kisan Credit Card": "https://www.myscheme.gov.in/schemes/kcc",
+                "PM Krishi Sinchai Yojana": "https://pmksy.gov.in/",
+                "Soil Health Card Scheme": "https://www.soilhealth.dac.gov.in/",
+                "PM KUSUM Yojana": "https://pmksy.gov.in/pmkusum/index.html"
+            }
+
+            url = scheme_urls.get(s["title"], "https://www.india.gov.in/topics/agriculture")
+            st.link_button(f"Apply for {s['title']} ↗", url, use_container_width=True)
+
 
 # ═══════════════════════════════════════════════════════
 # SMART SURVEY
