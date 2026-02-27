@@ -14,9 +14,6 @@ AgriConnect is a beautiful, easy-to-use AI app that helps *new farmers* (ex-IT p
 
 Built for *best UX* — simple, friendly, and focused on Karnataka farmers.
 
-## Screenshots
-(Add your screenshots here later – upload images to repo and use: ![Home](screenshots/home.png))
-
 ## Features
 - Survey → Personalized Farming Roadmap
 - Ask AI any farming question
@@ -26,19 +23,6 @@ Built for *best UX* — simple, friendly, and focused on Karnataka farmers.
 - Government Schemes & Eligibility
 - Multilingual (English, Kannada, Hindi, etc.)
 - Offline mode fallback
-
-## Tech Stack
-- Python
-- Streamlit (for beautiful UI)
-- Google Gemini API (text + vision)
-- Optional: sentence-transformers for retrieval
-
-## How to Run (for Judges/Mentors)
-1. Clone repo: git clone https://github.com/yourusername/agri-connect.git
-2. Install: pip install streamlit google-generativeai python-dotenv
-3. Create .env file: GEMINI_API_KEY=your_key_here
-4. Run: streamlit run app.py
-5. Open http://localhost:8501 in browser
 
 ## What Makes It Different?
 Unlike basic query tools, AgriConnect focuses on *new farmers* with onboarding, climate-smart advice, weather/pest integration, and polished UX — perfect for Bengaluru's urban-to-rural shift.
